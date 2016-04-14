@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Client</string>
+    <string name="title_activity_send_command">SendCommand</string>
+</resources>
