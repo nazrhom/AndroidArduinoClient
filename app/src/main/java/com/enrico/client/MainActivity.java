@@ -62,13 +62,17 @@ public class MainActivity extends Activity {
                 */
         intent.putExtra(ADDR_MESSAGE,addr);
         intent.putExtra(PORT_MESSAGE,port);
-/*
-        myClient.execute();
-        myClient.setMsg("^R;");
-        */
 
+        Client c = Client.getInstance();
+        c.setData(addr, Integer.parseInt(port));
+
+        if(c.connect()) {
+            startActivity(intent);
+        } else {
+            // display connection error on UI and do not change page
+        }
 //
-        startActivity(intent);
+
     }
 
 

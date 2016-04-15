@@ -9,77 +9,91 @@ package com.enrico.client;
         import java.net.InetAddress;
         import java.net.Socket;
         import java.net.UnknownHostException;
+        import java.util.concurrent.ExecutionException;
+
         import android.os.AsyncTask;
         import android.util.Log;
         import android.widget.TextView;
 
-public class Client extends AsyncTask<Void, Void, Void> {
-    final static String id = "CLIENT";
-    String dstAddress;
-    int dstPort;
-    String response = "";
-    String sentence="";
-    boolean changed =false;
-    DatagramSocket clientSocket = null;
-    DatagramPacket sendPacket;
-    InetAddress IpAddress;
+public final class Client {
+    final static String ID = "CLIENT";
 
-  public  Client(String addr, int port){//,String msg){//}, TextView textResponse) {
+    private static Client instance = null;
+    private Client() { }
+
+    String         dstAddress;
+    int            dstPort;
+    DatagramSocket socket;
+    InetAddress    IpAddress;
+
+    public void setData(String addr, int port) {
         this.dstAddress = addr;
         this.dstPort = port;
-        //sentence = msg;
-
     }
 
-    @Override
-    protected Void doInBackground(Void... arg0) {
+    public Boolean connect() {
+        UDPconnect con = new UDPconnect();
+        try {
+            return con.execute().get();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 
-        //Socket socket = null;
+    public AsyncTask scheduleSend(String d) {
+        return new SendPacket(d);
+    }
+
+    protected class SendPacket extends AsyncTask<Void, Void, Void> {
+        String data;
+
+        public SendPacket(String d) {
+            this.data = d;
+        }
+
+        @Override
+        protected Void doInBackground(Void... arg0) {
+            Client c  = Client.getInstance();
+            byte[] sendData = data.getBytes();
+            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, c.IpAddress, c.dstPort);
 
             try {
-
-                this.clientSocket = new DatagramSocket();
-                this.IpAddress = InetAddress.getByName(dstAddress);
-
-            } catch (UnknownHostException e) {
-                // TODO Auto-generated catch block
+                c.socket.send(sendPacket);
+            }
+            catch(Exception e){
                 e.printStackTrace();
-                response = "UnknownHostException: " + e.toString();
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-                response = "IOException: " + e.toString();
+                Log.v(ID, e.toString());
             }
 
             return null;
-
+        }
     }
-    public void setMsg(final String m)
-    {
 
-        final InetAddress IP = this.IpAddress;
-        final int port = this.dstPort;
-        Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                // this.changed = true;
-                byte[] sendData;
-                sendData = m.getBytes();
-                sendPacket = new DatagramPacket(sendData, sendData.length, IP, port);
-                //  sendPacket = new DatagramPacket(sendData,sendData.length);
-                Log.v(id , clientSocket.getLocalAddress().toString());
+    private class UDPconnect extends AsyncTask<Void, Void, Boolean> {
+        @Override
+        protected Boolean doInBackground(Void... arg0) {
+            Client c = Client.getInstance();
 
-                try {
-                    clientSocket.send(sendPacket);
-                }
-                catch(Exception e){
-                    e.printStackTrace();
-                    Log.v(id , e.toString());
-                }
+            try {
+                c.socket = new DatagramSocket();
+                c.IpAddress = InetAddress.getByName(dstAddress);
+                return true;
+            } catch (Exception e) {
+                e.printStackTrace();
+                Log.v(ID, e.toString());
+                return false;
             }
-        });
-        thread.start();
+        }
+    }
 
+
+    public static synchronized Client getInstance() {
+        if (instance == null) {
+            instance = new Client();
+        }
+
+        return instance;
     }
 
 }
